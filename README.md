@@ -28,7 +28,7 @@ ROS2 image Rover: "Siberia’s Last Hope"
 
 - **Pixracer → USB → mavlink-router → QGC**: телеметрия, параметры, миссии, джойстик.
 - **Pixracer → TELEM2 → uXRCE-DDS → ROS 2**: топики PX4 (`/fmu/...`), `/odom`, `/cmd_vel` → PX4.
-  Micro XRCE-DDS Agent запускается в `bringup.launch.py` (`agent:=true`, `/dev/rover_telem2`, 921600).
+  Micro XRCE-DDS Agent запускается в `bringup.launch.py` (`agent:=true`, `/dev/rover_fcu_telem`, 921600).
 - **Камеры → ROS-топики → `video_streamer` → QGC**: H.264 по RTSP. Камеру напрямую открывают только
   драйверы (`camera_ros`, `usb_cam`), стример читает кадры из топиков.
 
@@ -200,9 +200,25 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="26ac", ATTRS{idProduct}=="0011", SYMLINK+="r
 # RPLidar (CP210x USB-UART)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", SYMLINK+="rover_lidar", MODE="0666"
 # Pixracer TELEM2 через USB-UART для Micro XRCE-DDS Agent (если не используется GPIO UART Pi)
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="TELEM2", SYMLINK+="rover_telem2", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="TELEM2", SYMLINK+="rover_fcu_telem", MODE="0666"
 # вторая USB-камера: только узел видеопотока (index0), не metadata
 SUBSYSTEM=="video4linux", ATTRS{idVendor}=="1234", ATTRS{idProduct}=="5678", ATTR{index}=="0", SYMLINK+="rover_cam2", MODE="0666"
 ```
 
 Применить: `sudo udevadm control --reload && sudo udevadm trigger`.
+
+## CI и релизы
+
+| workflow | что делает |
+|---|---|
+| `.github/workflows/docker.yml` | образы в `ghcr.io/<владелец>/`: `rover-ros`, `rover-mavlink-router` (amd64 + arm64, нативные раннеры), `rover-px4-sitl` (amd64). Теги: `latest` (main), `sha-<коммит>`, `1.2.3` (из тега `v1.2.3`). На PR — только сборка. |
+| `.github/workflows/pi-image.yml` | образ SD-карты для Raspberry Pi 5/4 (Ubuntu Server 24.04 + Docker + образы для работы без интернета). На тег `v*` ждёт `docker.yml` и публикует GitHub Release. |
+
+Релиз: `git tag v1.2.3 && git push origin v1.2.3`. В образе SD всё лежит в `/opt/rover`
+(`docker/compose.yaml`, `rover_bringup/config`, `docker/mavlink-router/main.conf`, `.env` с `TAG`).
+Первая загрузка: `rover-images-load.service` загружает Docker-образы из `/opt/rover/images/` и удаляет архивы,
+затем `rover.service` выполняет `docker compose --profile robot up -d --pull never`.
+Сеть (`192.168.1.10/24`, шлюз `192.168.1.1`), пользователь `rover`/`rover` (пароль меняется при первом входе),
+`rover.local`, udev-правила — в `deploy/pi/`. Агент uXRCE-DDS — сервис `uxrce-agent` в compose
+(`XRCE_DEV`, `XRCE_BAUD`, по умолчанию `/dev/rover_fcu_telem`, 921600).
+
