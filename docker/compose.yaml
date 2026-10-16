@@ -34,7 +34,30 @@ services:
   ros:
     <<: *ros
     profiles: [ robot ]
+    volumes:
+      - /dev:/dev
+      # libcamera enumerates cameras through udev
+      - /run/udev:/run/udev:ro
+      # edit cameras.yaml / network.yaml without rebuilding the image
+      - ../rover_bringup/config:/opt/rover/share/rover_bringup/config:ro
+    # args: cameras, stream, web_video (all true by default)
     command: ros2 launch rover_bringup bringup.launch.py
+
+  # Pixracer (USB) -> QGroundControl. Third-party, not ROS.
+  mavlink-router:
+    image: ${MAVLINK_ROUTER_IMAGE:-rover-mavlink-router:${TAG:-latest}}
+    build:
+      context: ./mavlink-router
+    profiles: [ robot ]
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /dev:/dev
+      - ./mavlink-router/main.conf:/etc/mavlink-router/main.conf:ro
+    # ttyACM (166) and ttyUSB (188) serial devices
+    device_cgroup_rules:
+      - 'c 166:* rmw'
+      - 'c 188:* rmw'
 
   # simulation: gz <- px4-sitl <-(UDP 8888)-> MicroXRCEAgent in rover-ros
   gz:
