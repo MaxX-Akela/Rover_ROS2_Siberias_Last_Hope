@@ -3,7 +3,7 @@ import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -46,6 +46,37 @@ def web_video_and_stream(context):
     ]
 
 
+def control_nodes(context):
+    control_file = LaunchConfiguration('control_file')
+    mode = LaunchConfiguration('control_mode').perform(context)
+    bridge_params = [control_file] + ([{'control_mode': mode}] if mode else [])
+    return [
+        ExecuteProcess(
+            cmd=['MicroXRCEAgent', 'serial', '--dev', LaunchConfiguration('agent_dev'),
+                 '-b', LaunchConfiguration('agent_baud')],
+            name='micro_xrce_agent',
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('agent')),
+        ),
+        Node(
+            package='rover_fcu_bridge',
+            executable='rover_fcu_bridge_node',
+            name='rover_fcu_bridge',
+            output='screen',
+            parameters=bridge_params,
+            condition=IfCondition(LaunchConfiguration('fcu_bridge')),
+        ),
+        Node(
+            package='rover_teleop',
+            executable='mavlink_teleop',
+            name='rover_teleop',
+            output='screen',
+            parameters=[control_file],
+            condition=IfCondition(LaunchConfiguration('teleop')),
+        ),
+    ]
+
+
 def generate_launch_description():
     description = get_package_share_directory('rover_description')
     bringup = get_package_share_directory('rover_bringup')
@@ -58,6 +89,17 @@ def generate_launch_description():
                               description='Start the RTSP video_streamer (video for QGC)'),
         DeclareLaunchArgument('web_video', default_value='true',
                               description='Start web_video_server (MJPEG over HTTP)'),
+        DeclareLaunchArgument('agent', default_value='true',
+                              description='Start Micro XRCE-DDS Agent (Pixracer TELEM2 <-> ROS 2)'),
+        DeclareLaunchArgument('agent_dev', default_value='/dev/rover_telem2'),
+        DeclareLaunchArgument('agent_baud', default_value='921600'),
+        DeclareLaunchArgument('fcu_bridge', default_value='true',
+                              description='Start rover_fcu_bridge (/cmd_vel -> PX4, /odom)'),
+        DeclareLaunchArgument('teleop', default_value='true',
+                              description='Start rover_teleop (QGC joystick -> /cmd_vel)'),
+        DeclareLaunchArgument('control_mode', default_value='',
+                              description='direct | velocity; empty = value from control_file'),
+        DeclareLaunchArgument('control_file', default_value=os.path.join(config, 'control.yaml')),
         DeclareLaunchArgument('cameras_file', default_value=os.path.join(config, 'cameras.yaml')),
         DeclareLaunchArgument('network_file', default_value=os.path.join(config, 'network.yaml')),
         IncludeLaunchDescription(
@@ -69,4 +111,5 @@ def generate_launch_description():
             launch_arguments={'cameras_file': LaunchConfiguration('cameras_file')}.items(),
             condition=IfCondition(LaunchConfiguration('cameras'))),
         OpaqueFunction(function=web_video_and_stream),
+        OpaqueFunction(function=control_nodes),
     ])

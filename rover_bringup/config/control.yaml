@@ -1,0 +1,26 @@
+# Parameters of the control chain:
+#   QGC joystick -> mavlink-router -> rover_teleop -> /cmd_vel -> rover_fcu_bridge -> PX4
+rover_teleop:
+  ros__parameters:
+    connection: udpin:127.0.0.1:14560   # mavlink-router [UdpEndpoint teleop]
+    cmd_vel_topic: /cmd_vel
+    linear_axis: x          # MANUAL_CONTROL axis for forward/backward: x | y | z | r
+    angular_axis: r         # axis for turning
+    max_linear: 1.0         # m/s at full stick
+    max_angular: 1.0        # rad/s at full stick
+    deadzone: 0.05
+    invert_linear: false
+    invert_angular: false
+    z_center: 500           # only if an axis is 'z': 500 = centre stick is zero, 0 = negative thrust enabled in QGC
+    timeout: 0.5            # s without MANUAL_CONTROL -> zero Twist
+
+rover_fcu_bridge:
+  ros__parameters:
+    control_mode: direct    # direct | velocity (see rover_fcu_bridge_node.py)
+    cmd_vel_topic: /cmd_vel
+    cmd_vel_timeout: 0.5    # s without /cmd_vel -> stop
+    max_linear: 1.0         # direct: m/s that maps to throttle 1.0
+    max_angular: 1.0        # direct: rad/s that maps to steering 1.0
+    invert_steering: false  # flip if the rover turns the wrong way
+    velocity_yaw_horizon: 0.5
+    publish_tf: true        # TF odom -> base_link

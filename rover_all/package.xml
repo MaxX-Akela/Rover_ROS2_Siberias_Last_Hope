@@ -16,6 +16,7 @@
   <exec_depend>rover_navigation</exec_depend>
   <exec_depend>rover_slam</exec_depend>
   <exec_depend>rover_vision</exec_depend>
+  <exec_depend>rover_teleop</exec_depend>
   <exec_depend>rover_sim</exec_depend>
   <exec_depend>rover</exec_depend>
 

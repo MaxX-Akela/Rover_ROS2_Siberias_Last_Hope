@@ -15,6 +15,7 @@
   <exec_depend>rover_navigation</exec_depend>
   <exec_depend>rover_slam</exec_depend>
   <exec_depend>rover_vision</exec_depend>
+  <exec_depend>rover_teleop</exec_depend>
   <exec_depend>camera_ros</exec_depend>
   <exec_depend>usb_cam</exec_depend>
   <exec_depend>web_video_server</exec_depend>
