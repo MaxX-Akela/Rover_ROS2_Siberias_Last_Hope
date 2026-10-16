@@ -30,10 +30,10 @@ RUN --mount=type=cache,id=apt-px4-${TARGETPLATFORM},target=/var/cache/apt,sharin
 
 # ---------------------------------------------------------------- build PX4
 FROM px4-deps AS px4-dev
-ARG PX4_REPO=https://github.com/MaxX-Akela/PX4-Autopilot.git
+ARG PX4_REPO=https://github.com/Pulse-Width-Modulation-Technologies/PX4-Autopilot-Rover.git
 # Must match the px4_msgs version in third_party/rover.repos (release/1.16).
 # The gz_rover_differential airframe (50000) needs a PX4 tree that contains it.
-ARG PX4_VERSION=main
+ARG PX4_VERSION=rover
 
 WORKDIR /build
 RUN git clone ${PX4_REPO} PX4-Autopilot
