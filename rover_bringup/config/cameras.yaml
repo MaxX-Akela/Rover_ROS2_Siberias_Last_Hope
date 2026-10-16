@@ -1,0 +1,24 @@
+# Cameras started by launch/cameras.launch.py, one node per entry.
+#   name       camera name, also used as the ROS namespace unless `namespace` is set
+#   driver     camera_ros (libcamera, CSI cameras) | usb_cam (V4L2 USB cameras)
+#   device     camera_ros: camera index ("0") or libcamera id; usb_cam: /dev/... path
+#   width, height, fps   requested stream parameters
+#   namespace  optional, defaults to `name`
+# Images are published on /<namespace>/camera/image_raw
+cameras:
+  - name: front
+    driver: camera_ros
+    device: "0"
+    width: 1280
+    height: 720
+    fps: 30
+    namespace: front
+
+  # - name: rear
+  #   driver: usb_cam
+  #   device: /dev/rover_cam2
+  #   width: 640
+  #   height: 480
+  #   fps: 30
+  #   pixel_format: mjpeg2rgb
+  #   namespace: rear

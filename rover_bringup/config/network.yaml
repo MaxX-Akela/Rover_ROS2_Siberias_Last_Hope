@@ -1,0 +1,5 @@
+# Network layout of the rover. The Pi has a static address on the Keenetic router
+# (see README); the address here is only used to print/announce stream URLs.
+rover_ip: 192.168.1.10
+rtsp_port: 8554
+web_video_port: 8081
