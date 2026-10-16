@@ -11,6 +11,14 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
 
+  <!-- video_streamer: RTSP server on top of GStreamer (see also docker/ros/Dockerfile) -->
+  <exec_depend>python3-gi</exec_depend>
+  <exec_depend>gstreamer1.0</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-base</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-good</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-ugly</exec_depend>
+  <exec_depend>libgstrtspserver-1.0-0</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

@@ -16,4 +16,9 @@ setup(
     maintainer_email='mstepanov2610@gmail.com',
     description='Camera and image processing for the rover',
     license='Apache-2.0',
+    entry_points={
+        'console_scripts': [
+            'video_streamer = rover_vision.video_streamer:main',
+        ],
+    },
 )

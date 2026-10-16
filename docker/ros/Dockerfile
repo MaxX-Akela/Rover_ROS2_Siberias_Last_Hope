@@ -51,6 +51,19 @@ WORKDIR /ws
 COPY third_party/rover.repos /ws/rover.repos
 RUN vcs import --shallow src < rover.repos
 
+# GStreamer for rover_vision/video_streamer (python3-gi and the plugins also come from
+# package.xml; the RTSP server typelib has no rosdep key)
+RUN --mount=type=cache,id=apt-ros-${TARGETPLATFORM},target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-ros-lists-${TARGETPLATFORM},target=/var/lib/apt/lists,sharing=locked \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+        python3-gi \
+        gir1.2-gstreamer-1.0 \
+        gir1.2-gst-rtsp-server-1.0 \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly
+
 # only package.xml files, so the dependency layer is cached until dependencies change
 COPY --parents ./rover*/package.xml /ws/src/
 RUN --mount=type=cache,id=apt-ros-${TARGETPLATFORM},target=/var/cache/apt,sharing=locked \
