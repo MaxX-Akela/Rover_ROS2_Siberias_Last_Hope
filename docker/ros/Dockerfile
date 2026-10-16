@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7-labs
 # Build context: repository root (see docker/compose.yaml)
 ARG BASE_IMAGE=ros:jazzy-ros-base
 ARG ROS_DISTRO=jazzy

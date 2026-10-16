@@ -11,10 +11,6 @@ concurrency:
   group: docker-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  PX4_REPO: https://github.com/Pulse-Width-Modulation-Technologies/PX4-Autopilot-Rover.git
-  PX4_VERSION: rover
-
 permissions:
   contents: read
   packages: write
@@ -32,7 +28,6 @@ jobs:
           - { image: rover-ros,            arch: arm64, runner: ubuntu-24.04-arm, platform: linux/arm64, context: ., file: docker/ros/Dockerfile,                 target: rover-ros }
           - { image: rover-mavlink-router, arch: amd64, runner: ubuntu-24.04,     platform: linux/amd64, context: docker/mavlink-router, file: docker/mavlink-router/Dockerfile, target: '' }
           - { image: rover-mavlink-router, arch: arm64, runner: ubuntu-24.04-arm, platform: linux/arm64, context: docker/mavlink-router, file: docker/mavlink-router/Dockerfile, target: '' }
-          - { image: rover-px4-sitl,       arch: amd64, runner: ubuntu-24.04,     platform: linux/amd64, context: ., file: docker/px4/Dockerfile,                 target: px4-sitl, px4: true }
     steps:
       - uses: actions/checkout@v4
 
@@ -58,9 +53,6 @@ jobs:
           file: ${{ matrix.file }}
           target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
-          build-args: |
-            ${{ matrix.px4 && format('PX4_REPO={0}', env.PX4_REPO) || '' }}
-            ${{ matrix.px4 && format('PX4_VERSION={0}', env.PX4_VERSION) || '' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -92,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ rover-ros, rover-mavlink-router, rover-px4-sitl ]
+        image: [ rover-ros, rover-mavlink-router ]
     steps:
       - name: Registry name (lower case owner)
         id: reg

@@ -15,7 +15,7 @@ RUN --mount=type=cache,id=apt-px4-${TARGETPLATFORM},target=/var/cache/apt,sharin
     apt-get install -y --no-install-recommends \
         build-essential ccache cmake ninja-build git \
         python3 python3-dev python3-pip python3-setuptools python3-wheel \
-        libxml2-dev libssl-dev libeigen3-dev file rsync zip unzip wget gnupg \
+        libxml2-dev libssl-dev libeigen3-dev libopencv-dev file rsync zip unzip wget gnupg \
         lsb-release ca-certificates
 
 # Gazebo Harmonic
