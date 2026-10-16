@@ -8,6 +8,8 @@ ARG TARGETPLATFORM
 FROM ${BASE_IMAGE} AS base
 ARG TARGETPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive
+# rosdep installs pymavlink (rover_teleop) with pip; Ubuntu 24.04 marks system Python as externally managed
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # keep downloaded .deb files so the apt cache mounts are useful
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -24,7 +26,8 @@ RUN --mount=type=cache,id=apt-ros-${TARGETPLATFORM},target=/var/cache/apt,sharin
         cmake \
         python3-rosdep \
         python3-vcstool \
-        python3-colcon-common-extensions
+        python3-colcon-common-extensions \
+        python3-pip
 
 RUN rosdep init || true
 
