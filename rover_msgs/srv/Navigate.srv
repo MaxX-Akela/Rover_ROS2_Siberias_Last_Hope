@@ -1,0 +1,8 @@
+float32 x
+float32 y
+float32 yaw
+float32 speed
+string frame_id
+---
+bool success
+string message

@@ -1,0 +1,68 @@
+name: rover
+
+# Build context is the repository root:
+#   docker compose -f docker/compose.yaml --profile robot up --build
+#   docker compose -f docker/compose.yaml --profile sim up --build
+
+x-ros: &ros
+  image: ${ROS_IMAGE:-rover-ros:${TAG:-latest}}
+  build:
+    context: ..
+    dockerfile: docker/ros/Dockerfile
+    target: rover-ros
+  network_mode: host
+  ipc: host
+  privileged: true
+  restart: unless-stopped
+  stop_signal: SIGINT
+  stop_grace_period: 30s
+  volumes:
+    - /dev:/dev
+  environment: &ros-env
+    ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+
+x-px4-build: &px4-build
+  context: ..
+  dockerfile: docker/px4/Dockerfile
+  args:
+    PX4_REPO: ${PX4_REPO:-https://github.com/MaxX-Akela/PX4-Autopilot.git}
+    PX4_VERSION: ${PX4_VERSION:-main}
+
+services:
+
+  # real robot
+  ros:
+    <<: *ros
+    profiles: [ robot ]
+    command: ros2 launch rover_bringup bringup.launch.py
+
+  # simulation: gz <- px4-sitl <-(UDP 8888)-> MicroXRCEAgent in rover-ros
+  gz:
+    image: ${GZ_IMAGE:-rover-gz:${TAG:-latest}}
+    build:
+      <<: *px4-build
+      target: gz
+    profiles: [ sim ]
+    network_mode: host
+    ipc: host
+    restart: unless-stopped
+
+  px4-sitl:
+    image: ${PX4_IMAGE:-rover-px4-sitl:${TAG:-latest}}
+    build:
+      <<: *px4-build
+      target: px4-sitl
+    profiles: [ sim ]
+    network_mode: host
+    ipc: host
+    depends_on: [ gz ]
+    restart: unless-stopped
+
+  ros-sim:
+    <<: *ros
+    privileged: false
+    volumes: []
+    profiles: [ sim ]
+    depends_on: [ px4-sitl ]
+    # MicroXRCEAgent udp4 -p 8888 + rover_fcu_bridge (PX4 runs in its own container)
+    command: ros2 launch rover_sim sim.launch.py px4:=false agent_port:=8888
