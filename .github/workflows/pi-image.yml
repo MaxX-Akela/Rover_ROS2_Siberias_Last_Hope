@@ -1,0 +1,248 @@
+name: pi-image
+
+# SD card image for Raspberry Pi 5 / Pi 4: Ubuntu Server 24.04 + Docker + rover stack with
+# Docker images preloaded (the site has no internet). On a v* tag it also publishes a GitHub Release.
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag of the Docker images to bake in (e.g. 1.2.3 or latest)'
+        default: latest
+        required: true
+
+concurrency:
+  group: pi-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # base image: official Ubuntu Server preinstalled for Raspberry Pi (arm64)
+  UBUNTU_VERSION: '24.04.5'
+  UBUNTU_URL: https://cdimage.ubuntu.com/ubuntu/releases/24.04/release/ubuntu-24.04.5-preinstalled-server-arm64+raspi.img.xz
+  UBUNTU_SHA256: b23371a5c8d02f612c26e7c18cacb81c5a48f968c7c66a2645391320aa94351e
+  # static address of the Pi on the Keenetic router
+  ROVER_IP: 192.168.1.10
+  ROVER_PREFIX: '24'
+  ROVER_GW: 192.168.1.1
+  # PX4 firmware fork, mentioned in the release notes
+  PX4_FORK: Pulse-Width-Modulation-Technologies/PX4-Autopilot-Rover
+  PX4_VERSION: rover
+  # GitHub release assets are limited to 2 GiB
+  PART_SIZE: 1900M
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  # the Docker images of this tag must exist before they are baked into the SD image
+  wait-docker:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Wait for docker.yml on this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          run_id=""
+          for _ in $(seq 1 30); do
+            run_id=$(gh run list --workflow docker.yml --branch "${GITHUB_REF_NAME}" --event push \
+                       --json databaseId,headSha --limit 20 \
+                       --jq "map(select(.headSha == \"${GITHUB_SHA}\")) | first | .databaseId // empty")
+            [ -n "$run_id" ] && break
+            echo "docker.yml has not started for ${GITHUB_REF_NAME} yet"
+            sleep 20
+          done
+          [ -n "$run_id" ] || { echo "docker.yml run for ${GITHUB_REF_NAME} not found"; exit 1; }
+          gh run watch "$run_id" --exit-status --interval 30
+
+  image:
+    needs: wait-docker
+    # run for tags (after wait-docker succeeded) and for manual runs (wait-docker skipped)
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      registry: ${{ steps.ver.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version and registry
+        id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${INPUT_VERSION:-latest}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/powershell /usr/share/swift || true
+          sudo docker image prune -af || true
+          df -h /
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zerofree parted zstd xz-utils e2fsprogs fdisk
+
+      - name: Cache base image
+        uses: actions/cache@v4
+        with:
+          path: base.img.xz
+          key: ubuntu-base-${{ env.UBUNTU_SHA256 }}
+
+      - name: Download base image and verify sha256
+        run: |
+          if [ ! -f base.img.xz ]; then
+            curl -fL --retry 5 -o base.img.xz "${UBUNTU_URL}"
+          fi
+          echo "${UBUNTU_SHA256}  base.img.xz" | sha256sum -c -
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull arm64 images and save them for offline use
+        env:
+          REGISTRY: ${{ steps.ver.outputs.registry }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          mkdir -p images
+          for name in rover-ros rover-mavlink-router; do
+            docker pull --platform linux/arm64 "${REGISTRY}/${name}:${VERSION}"
+            docker save "${REGISTRY}/${name}:${VERSION}" | zstd -T0 -10 -o "images/${name}.tar.zst"
+          done
+          ls -lh images
+          docker image prune -af
+
+      - name: Build the SD image
+        env:
+          REGISTRY: ${{ steps.ver.outputs.registry }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          sudo --preserve-env=ROVER_IP,ROVER_PREFIX,ROVER_GW \
+            BASE_IMG_XZ="${PWD}/base.img.xz" \
+            OUT_IMG="${PWD}/rover-pi-${VERSION}.img" \
+            IMAGES_DIR="${PWD}/images" \
+            ROVER_VERSION="${VERSION}" \
+            IMAGE_REGISTRY="${REGISTRY}" \
+            deploy/pi/build-image.sh
+          rm -rf images base.img.xz
+          df -h /
+
+      - name: Compress, split if needed, checksum
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          mkdir dist
+          sudo chown "$USER" "rover-pi-${VERSION}.img"
+          xz -T0 -9 -c "rover-pi-${VERSION}.img" > "dist/rover-pi-${VERSION}.img.xz"
+          rm -f "rover-pi-${VERSION}.img"
+          cd dist
+          limit=$((2000 * 1024 * 1024))
+          size=$(stat -c %s "rover-pi-${VERSION}.img.xz")
+          if [ "$size" -gt "$limit" ]; then
+            split -b "${PART_SIZE}" -d "rover-pi-${VERSION}.img.xz" "rover-pi-${VERSION}.img.xz.part"
+            sha256sum "rover-pi-${VERSION}.img.xz" > "rover-pi-${VERSION}.img.xz.sha256"
+            rm "rover-pi-${VERSION}.img.xz"
+            cat > JOIN.txt <<JOIN
+          The image is split into parts (GitHub allows at most 2 GiB per file). Join and verify:
+
+            Linux/macOS:  cat rover-pi-${VERSION}.img.xz.part* > rover-pi-${VERSION}.img.xz
+                          sha256sum -c rover-pi-${VERSION}.img.xz.sha256
+            Windows (cmd): copy /b rover-pi-${VERSION}.img.xz.part* rover-pi-${VERSION}.img.xz
+                          certutil -hashfile rover-pi-${VERSION}.img.xz SHA256   (compare with the .sha256 file)
+
+          Then flash rover-pi-${VERSION}.img.xz with Raspberry Pi Imager ("Use custom") or balenaEtcher.
+          JOIN
+          else
+            sha256sum "rover-pi-${VERSION}.img.xz" > "rover-pi-${VERSION}.img.xz.sha256"
+          fi
+          sha256sum -- * > ../SHA256SUMS
+          mv ../SHA256SUMS SHA256SUMS
+          ls -lh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rover-pi-image-${{ steps.ver.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  release:
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rover-pi-image-${{ needs.image.outputs.version }}
+          path: dist
+
+      - name: Release notes
+        env:
+          VERSION: ${{ needs.image.outputs.version }}
+          REGISTRY: ${{ needs.image.outputs.registry }}
+        run: |
+          split=""
+          [ -f dist/JOIN.txt ] && split="yes"
+          {
+            echo "## Rover ${VERSION}"
+            echo
+            echo "### Docker-образы (GHCR)"
+            echo
+            echo "- \`${REGISTRY}/rover-ros:${VERSION}\` (amd64, arm64)"
+            echo "- \`${REGISTRY}/rover-mavlink-router:${VERSION}\` (amd64, arm64)"
+            echo "- \`${REGISTRY}/rover-px4-sitl:${VERSION}\` (amd64, симулятор)"
+            echo
+            echo "Образы \`rover-ros\` и \`rover-mavlink-router\` уже вшиты в образ SD-карты и загружаются при первом запуске без интернета."
+            echo
+            echo "### Прошивка PX4"
+            echo
+            echo "Форк: [${PX4_FORK}](https://github.com/${PX4_FORK}) (ветка/тег \`${PX4_VERSION}\`), релизы: https://github.com/${PX4_FORK}/releases"
+            echo
+            echo "### Образ SD-карты (Raspberry Pi 5 / 4)"
+            echo
+            if [ -n "$split" ]; then
+              echo "Образ разрезан на части (лимит GitHub — 2 ГБ на файл). Склейка и проверка — в \`JOIN.txt\`:"
+              echo
+              echo '```sh'
+              echo "cat rover-pi-${VERSION}.img.xz.part* > rover-pi-${VERSION}.img.xz"
+              echo "sha256sum -c rover-pi-${VERSION}.img.xz.sha256"
+              echo '```'
+              echo
+            fi
+            echo "1. Запишите \`rover-pi-${VERSION}.img.xz\` на SD-карту через Raspberry Pi Imager («Use custom») или balenaEtcher."
+            echo "2. Вставьте карту в Pi, подключите Pi к роутеру Keenetic по Ethernet, включите питание. Первая загрузка занимает несколько минут (загрузка Docker-образов, генерация ключей SSH)."
+            echo "3. Pi получает адрес \`${ROVER_IP}/${ROVER_PREFIX}\` (шлюз \`${ROVER_GW}\`), доступна как \`rover.local\`. Вход по SSH: пользователь \`rover\`, пароль \`rover\` — **система потребует сменить пароль при первом входе**."
+            echo "4. Подключите ноутбук к Wi-Fi роутера и откройте QGroundControl: TCP \`${ROVER_IP}:5760\` или UDP \`14550\`, видео \`rtsp://${ROVER_IP}:8554/front\`."
+            echo
+            echo "Контрольные суммы: \`SHA256SUMS\`."
+          } > notes.md
+          cat notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: dist/*
+          fail_on_unmatched_files: true

@@ -1,0 +1,12 @@
+#cloud-config
+# First boot configuration. The user `rover` is created in the image (customize.sh);
+# listing it here stops cloud-init from creating the default `ubuntu` user.
+hostname: rover
+preserve_hostname: true
+manage_etc_hosts: true
+ssh_pwauth: true
+ssh_deletekeys: true
+users:
+  - name: rover
+package_update: false
+package_upgrade: false

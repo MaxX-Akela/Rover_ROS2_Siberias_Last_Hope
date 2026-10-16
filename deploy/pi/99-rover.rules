@@ -1,0 +1,16 @@
+# Stable device names for the rover (installed to /etc/udev/rules.d/ in the SD image).
+# Find your own ids: udevadm info -a -n /dev/ttyACM0 | grep -E 'idVendor|idProduct|serial'
+
+# Pixracer (PX4, USB CDC) -> mavlink-router
+SUBSYSTEM=="tty", ATTRS{idVendor}=="26ac", ATTRS{idProduct}=="0011", SYMLINK+="rover_fcu", MODE="0666"
+
+# Pixracer TELEM2 -> uXRCE-DDS agent: Pi GPIO UART (pins 14/15, enable_uart=1)
+SUBSYSTEM=="tty", KERNEL=="ttyAMA0", SYMLINK+="rover_fcu_telem", MODE="0666"
+# ... or a USB-UART adapter instead (comment the rule above and fill in the ids):
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="TELEM2", SYMLINK+="rover_fcu_telem", MODE="0666"
+
+# RPLidar (CP210x USB-UART)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="rover_lidar", MODE="0666"
+
+# Second USB camera (video node only, index0). Placeholder ids: fill in and uncomment.
+# SUBSYSTEM=="video4linux", ATTRS{idVendor}=="1234", ATTRS{idProduct}=="5678", ATTR{index}=="0", SYMLINK+="rover_cam2", MODE="0666"

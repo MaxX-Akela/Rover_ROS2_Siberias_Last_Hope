@@ -1,0 +1,17 @@
+[Unit]
+Description=Rover (docker compose, profile robot)
+After=docker.service rover-images-load.service network.target
+Requires=docker.service
+Wants=rover-images-load.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/rover
+# no pull: there is no internet on site, the images come from rover-images-load.service
+ExecStart=/usr/bin/docker compose --env-file /opt/rover/.env -f /opt/rover/docker/compose.yaml --profile robot up -d --pull never --no-build
+ExecStop=/usr/bin/docker compose --env-file /opt/rover/.env -f /opt/rover/docker/compose.yaml --profile robot down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

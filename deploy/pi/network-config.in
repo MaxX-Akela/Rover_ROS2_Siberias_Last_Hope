@@ -1,0 +1,15 @@
+# cloud-init network-config (netplan v2 syntax), rendered to /etc/netplan at first boot.
+# Keenetic router: the Pi has a static address on Ethernet.
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      dhcp6: false
+      optional: true
+      addresses: [@ROVER_IP@/@ROVER_PREFIX@]
+      routes:
+        - to: default
+          via: @ROVER_GW@
+      nameservers:
+        addresses: [@ROVER_GW@]
