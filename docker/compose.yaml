@@ -40,8 +40,20 @@ services:
       - /run/udev:/run/udev:ro
       # edit cameras.yaml / network.yaml without rebuilding the image
       - ../rover_bringup/config:/opt/rover/share/rover_bringup/config:ro
-    # args: cameras, stream, web_video (all true by default)
-    command: ros2 launch rover_bringup bringup.launch.py
+    depends_on: [ uxrce-agent ]
+    # args: cameras, stream, web_video, teleop, fcu_bridge (all true by default).
+    # The uXRCE-DDS agent runs in its own service below.
+    command: ros2 launch rover_bringup bringup.launch.py agent:=false
+
+  # Pixracer TELEM2 <-> ROS 2 (uXRCE-DDS). Same image as `ros`.
+  uxrce-agent:
+    <<: *ros
+    profiles: [ robot ]
+    environment:
+      <<: *ros-env
+      XRCE_DEV: ${XRCE_DEV:-/dev/rover_fcu_telem}
+      XRCE_BAUD: ${XRCE_BAUD:-921600}
+    command: [ "bash", "-c", "exec MicroXRCEAgent serial --dev \"$${XRCE_DEV}\" -b \"$${XRCE_BAUD}\"" ]
 
   # Pixracer (USB) -> QGroundControl. Third-party, not ROS.
   mavlink-router:

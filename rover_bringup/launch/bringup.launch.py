@@ -91,7 +91,7 @@ def generate_launch_description():
                               description='Start web_video_server (MJPEG over HTTP)'),
         DeclareLaunchArgument('agent', default_value='true',
                               description='Start Micro XRCE-DDS Agent (Pixracer TELEM2 <-> ROS 2)'),
-        DeclareLaunchArgument('agent_dev', default_value='/dev/rover_telem2'),
+        DeclareLaunchArgument('agent_dev', default_value='/dev/rover_fcu_telem'),
         DeclareLaunchArgument('agent_baud', default_value='921600'),
         DeclareLaunchArgument('fcu_bridge', default_value='true',
                               description='Start rover_fcu_bridge (/cmd_vel -> PX4, /odom)'),
