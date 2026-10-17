@@ -81,9 +81,14 @@ cat >> "${BOOT}/config.txt" <<'CFG'
 [all]
 enable_uart=1
 camera_auto_detect=1
+# SPI for the WS2812 LED strip (rover_led)
+dtparam=spi=on
 
 [pi4]
 dtoverlay=disable-bt
+# fixed core clock: the SPI clock (WS2812 timing) follows it
+core_freq=500
+core_freq_min=500
 [all]
 CFG
 # the UART carries uXRCE-DDS, not a login console

@@ -40,8 +40,11 @@ services:
       - /run/udev:/run/udev:ro
       # edit cameras.yaml / network.yaml without rebuilding the image
       - ../rover_bringup/config:/opt/rover/share/rover_bringup/config:ro
+      # LED strip hardware and event table (led:=true)
+      - ../rover_led/config:/opt/rover/share/rover_led/config:ro
     depends_on: [ uxrce-agent ]
-    # args: cameras, stream, web_video, teleop, fcu_bridge (all true by default).
+    # args: cameras, stream, web_video, teleop, fcu_bridge (all true by default),
+    # slam, led (false by default; /dev/spidev* for led comes from the /dev mount).
     # The uXRCE-DDS agent runs in its own service below.
     command: ros2 launch rover_bringup bringup.launch.py agent:=false
 

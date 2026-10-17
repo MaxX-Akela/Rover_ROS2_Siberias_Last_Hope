@@ -199,48 +199,6 @@ jobs:
           name: rover-pi-image-${{ needs.image.outputs.version }}
           path: dist
 
-      - name: Release notes
-        env:
-          VERSION: ${{ needs.image.outputs.version }}
-          REGISTRY: ${{ needs.image.outputs.registry }}
-        run: |
-          split=""
-          [ -f dist/JOIN.txt ] && split="yes"
-          {
-            echo "## Rover ${VERSION}"
-            echo
-            echo "### Docker-образы (GHCR)"
-            echo
-            echo "- \`${REGISTRY}/rover-ros:${VERSION}\` (amd64, arm64)"
-            echo "- \`${REGISTRY}/rover-mavlink-router:${VERSION}\` (amd64, arm64)"
-            echo "- \`${REGISTRY}/rover-px4-sitl:${VERSION}\` (amd64, симулятор)"
-            echo
-            echo "Образы \`rover-ros\` и \`rover-mavlink-router\` уже вшиты в образ SD-карты и загружаются при первом запуске без интернета."
-            echo
-            echo "### Прошивка PX4"
-            echo
-            echo "Форк: [${PX4_FORK}](https://github.com/${PX4_FORK}) (ветка/тег \`${PX4_VERSION}\`), релизы: https://github.com/${PX4_FORK}/releases"
-            echo
-            echo "### Образ SD-карты (Raspberry Pi 5 / 4)"
-            echo
-            if [ -n "$split" ]; then
-              echo "Образ разрезан на части (лимит GitHub — 2 ГБ на файл). Склейка и проверка — в \`JOIN.txt\`:"
-              echo
-              echo '```sh'
-              echo "cat rover-pi-${VERSION}.img.xz.part* > rover-pi-${VERSION}.img.xz"
-              echo "sha256sum -c rover-pi-${VERSION}.img.xz.sha256"
-              echo '```'
-              echo
-            fi
-            echo "1. Запишите \`rover-pi-${VERSION}.img.xz\` на SD-карту через Raspberry Pi Imager («Use custom») или balenaEtcher."
-            echo "2. Вставьте карту в Pi, подключите Pi к роутеру Keenetic по Ethernet, включите питание. Первая загрузка занимает несколько минут (загрузка Docker-образов, генерация ключей SSH)."
-            echo "3. Pi получает адрес \`${ROVER_IP}/${ROVER_PREFIX}\` (шлюз \`${ROVER_GW}\`), доступна как \`rover.local\`. Вход по SSH: пользователь \`rover\`, пароль \`rover\` — **система потребует сменить пароль при первом входе**."
-            echo "4. Подключите ноутбук к Wi-Fi роутера и откройте QGroundControl: TCP \`${ROVER_IP}:5760\` или UDP \`14550\`, видео \`rtsp://${ROVER_IP}:8554/front\`."
-            echo
-            echo "Контрольные суммы: \`SHA256SUMS\`."
-          } > notes.md
-          cat notes.md
-
       - uses: softprops/action-gh-release@v2
         with:
           body_path: notes.md
