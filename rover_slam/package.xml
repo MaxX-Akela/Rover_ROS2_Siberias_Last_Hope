@@ -3,14 +3,21 @@
 <package format="3">
   <name>rover_slam</name>
   <version>0.1.0</version>
-  <description>SLAM and localization for the rover</description>
+  <description>2D SLAM (RPLIDAR A1 + slam_toolbox) and vision_to_px4 pose feed for the rover</description>
   <maintainer email="mstepanov2610@gmail.com">MaxX-Akela</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>px4_msgs</depend>
+  <depend>rover_fcu_bridge</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>sllidar_ros2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

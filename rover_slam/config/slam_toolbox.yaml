@@ -1,0 +1,60 @@
+# slam_toolbox (online async) for an RPLIDAR A1 on a ground rover.
+# Needs: /scan (sllidar_ros2), TF odom -> base_link (rover_fcu_bridge, from PX4 EKF) and
+# base_link -> laser (static transform from slam.launch.py). Publishes /map and TF map -> odom.
+slam_toolbox:
+  ros__parameters:
+    # frames and topics
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /scan
+    mode: mapping               # mapping | localization
+
+    use_scan_matching: true
+    use_scan_barycenter: true
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.
+    map_update_interval: 2.0
+    resolution: 0.05
+    min_laser_range: 0.15       # RPLIDAR A1: 0.15 .. 12 m
+    max_laser_range: 12.0
+    minimum_time_interval: 0.5
+    throttle_scans: 1
+    transform_publish_period: 0.02
+    publish_occupancy_map: true
+    debug_logging: false
+    stack_size_to_use: 40000000
+
+    # a rover moves slowly: add a scan every 0.2 m or ~10 degrees
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.17
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 3.0
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+
+    # correlation parameters
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+
+    # loop closure correlation parameters
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # scan matcher
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution: 0.0349
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true
