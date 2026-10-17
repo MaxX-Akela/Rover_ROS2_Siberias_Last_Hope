@@ -1,0 +1,20 @@
+# event -> effect table of led_effect.
+# effect: fill | blink | blink_fast | fade | wipe | flash | rainbow | rainbow_fill; r, g, b: 0..255.
+# Priority, highest first: emergency_stop, failsafe, low_battery, gcs_lost, then (armed) the
+# flight mode, or "armed" if the mode has no entry, and "disarmed" at rest.
+led_effect:
+  ros__parameters:
+    notify:
+      startup: { effect: fill, r: 255, g: 255, b: 255 }       # no vehicle_status yet
+      disconnected: { effect: blink, r: 255, g: 50, b: 50 }   # PX4 stopped publishing (uXRCE-DDS down)
+      gcs_lost: { effect: blink, r: 255, g: 120, b: 0 }       # no link to QGC
+      disarmed: { effect: rainbow }                           # idle
+      armed: { effect: fill, r: 0, g: 255, b: 0 }
+      manual: { effect: fill, r: 245, g: 155, b: 0 }
+      stabilized: { effect: fill, r: 30, g: 180, b: 50 }
+      position: { effect: fill, r: 50, g: 100, b: 220 }
+      offboard: { effect: fill, r: 220, g: 20, b: 250 }
+      hold: { effect: fill, r: 255, g: 255, b: 40 }
+      failsafe: { effect: blink_fast, r: 255, g: 0, b: 0 }
+      low_battery: { effect: blink_fast, r: 255, g: 0, b: 0, threshold: 3.6 }  # V per cell
+      emergency_stop: { effect: flash, r: 255, g: 0, b: 0 }   # kill switch / lockdown / termination

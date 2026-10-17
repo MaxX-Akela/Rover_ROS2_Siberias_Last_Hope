@@ -1,0 +1,14 @@
+# Strip hardware. led_count must be the same for both nodes (max 160 LEDs per SPI transfer).
+led_driver:
+  ros__parameters:
+    led_count: 30
+    spi_bus: 0          # /dev/spidev<bus>.<device>, strip DIN on MOSI (GPIO10, pin 19)
+    spi_device: 0
+    brightness: 0.3     # 0..1, scales the output (the strip draws a lot at full white)
+
+led_effect:
+  ros__parameters:
+    led_count: 30
+    rate: 25.0
+    fcu_timeout: 2.0    # s without vehicle_status -> "disconnected"
+    battery_cells: 0    # 0 = take cell_count from battery_status

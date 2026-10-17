@@ -1,16 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>rover_navigation</name>
+  <name>rover_led</name>
   <version>0.1.0</version>
-  <description>Autonomous navigation for the rover</description>
+  <description>WS2812 LED strip (SPI) driver and PX4 status effects for the rover</description>
   <maintainer email="mstepanov2610@gmail.com">MaxX-Akela</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>nav_msgs</depend>
+  <depend>led_msgs</depend>
+  <depend>rover_msgs</depend>
+  <depend>px4_msgs</depend>
+  <exec_depend>python3-spidev-pip</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
