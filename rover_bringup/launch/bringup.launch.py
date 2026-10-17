@@ -77,6 +77,19 @@ def control_nodes(context):
     ]
 
 
+def optional_includes(context):
+    slam = get_package_share_directory('rover_slam')
+    led = get_package_share_directory('rover_led')
+    return [
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(slam, 'launch', 'slam.launch.py')),
+            condition=IfCondition(LaunchConfiguration('slam'))),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(led, 'launch', 'led.launch.py')),
+            condition=IfCondition(LaunchConfiguration('led'))),
+    ]
+
+
 def generate_launch_description():
     description = get_package_share_directory('rover_description')
     bringup = get_package_share_directory('rover_bringup')
@@ -97,6 +110,10 @@ def generate_launch_description():
                               description='Start rover_fcu_bridge (/cmd_vel -> PX4, /odom)'),
         DeclareLaunchArgument('teleop', default_value='true',
                               description='Start rover_teleop (QGC joystick -> /cmd_vel)'),
+        DeclareLaunchArgument('slam', default_value='false',
+                              description='Start RPLIDAR A1 + slam_toolbox and send the pose to PX4'),
+        DeclareLaunchArgument('led', default_value='false',
+                              description='Start the WS2812 strip (SPI) with PX4 status effects'),
         DeclareLaunchArgument('control_mode', default_value='',
                               description='direct | velocity; empty = value from control_file'),
         DeclareLaunchArgument('control_file', default_value=os.path.join(config, 'control.yaml')),
@@ -112,4 +129,5 @@ def generate_launch_description():
             condition=IfCondition(LaunchConfiguration('cameras'))),
         OpaqueFunction(function=web_video_and_stream),
         OpaqueFunction(function=control_nodes),
+        OpaqueFunction(function=optional_includes),
     ])
