@@ -12,6 +12,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ArmDisarm.srv"
   "srv/Stop.srv"
   "srv/SetArmPose.srv"
+  "srv/SetLEDEffect.srv"
 )
 
 ament_export_dependencies(rosidl_default_runtime)
