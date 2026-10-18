@@ -1,4 +1,4 @@
-# Rover_ROS2_Siberias_Last_Hope
+# Rover-ROS2 image for RPI5
 ROS2 image Rover: «Pulse-Width Modulation»
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-blue?logo=ros)](https://docs.ros.org/en/jazzy)
