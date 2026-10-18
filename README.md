@@ -1,5 +1,5 @@
 # Rover_ROS2_Siberias_Last_Hope
-ROS2 image Rover: "Siberia’s Last Hope"
+ROS2 image Rover: «Pulse-Width Modulation»
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-blue?logo=ros)](https://docs.ros.org/en/jazzy)
 [![PX4](https://img.shields.io/badge/PX4-1.17-blue)](https://px4.io)
